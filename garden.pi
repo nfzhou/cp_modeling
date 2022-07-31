@@ -10,11 +10,11 @@ main =>
     BestObj = (0,-1),
     BestPath = [],
     foreach (R in 1..H, LenLimit in 1..Limit)
-        path(H,W,RewardA,R,1,LenLimit,[],Path,Obj),
-        writeln($sol(Obj,Path)),
-        if Obj @> BestObj then
-            BestObj := Obj,
-            BestPath := Path
+        if path(H,W,RewardA,R,1,LenLimit,[],Path,Obj) then
+            if Obj @> BestObj then
+                BestObj := Obj,
+                BestPath := Path
+            end
         end
     end,
     writeln(BestObj),
