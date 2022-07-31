@@ -1,0 +1,50 @@
+import json.
+
+main =>
+    Input = json_read(),
+    W = Input.get("W"),
+    H = Input.get("H"),
+    Reward = Input.get("reward"),
+    RewardA = {to_array(Row) : Row in Reward},
+    Limit = Input.get("length"),
+    BestObj = (0,-1),
+    BestPath = [],
+    foreach (R in 1..H, LenLimit in 1..Limit)
+        path(H,W,RewardA,R,1,LenLimit,[],Path,Obj),
+        writeln($sol(Obj,Path)),
+        if Obj @> BestObj then
+            BestObj := Obj,
+            BestPath := Path
+        end
+    end,
+    writeln(BestObj),
+    writeln(BestPath),
+    O = new_map(),
+    Rs = [R : (R,C) in BestPath],
+    Cs = [C : (R,C) in BestPath],
+    O.put("x", Cs),
+    O.put("y", Rs),
+    json_write(O).
+
+table (+,+,+,+,+,+,+,-,max)
+path(H,W,RewardA,R,C,Limit,Hist,Path,Obj), Limit == 0 =>
+    Path = [],
+    Obj = (0, 0).
+path(H,W,RewardA,R,C,Limit,Hist,Path,Obj) =>
+    neibs(H,W,R,C,Neibs),
+    UncollectedNeibs = [Neib: Neib in Neibs, Neib = (R1,C1), RewardA[R1,C1] !== 0, not member(Neib,Hist)],
+    Hist1 = sort(Hist ++ UncollectedNeibs),
+    member((R1,C1),Neibs),
+    RewardA[R1,C1] == 0,
+    path(H,W,RewardA,R1,C1,Limit-1,Hist1,Path1,Obj1),
+    Path = [(R,C)|Path1],
+    Obj1 = (Gain1,PathLen1),
+    Obj = (Gain1 + sum([RewardA[TR,TC] : (TR,TC) in UncollectedNeibs]), PathLen1-1).
+
+neibs(H,W,R,C,Neibs), even(R) =>
+    Neibs = [(R1,C1) : (R1,C1) in [(R,C-1),(R,C+1),(R-1,C),(R-1,C+1),(R+1,C),(R+1,C+1)],
+                        R1 >= 1, R1 <= H, C1 >= 1, C1 <= W].
+neibs(H,W,R,C,Neibs) =>
+    Neibs = [(R1,C1) : (R1,C1) in [(R,C-1),(R,C+1),(R-1,C-1),(R-1,C),(R+1,C-1),(R+1,C)],
+                        R1 >= 1, R1 <= H, C1 >= 1, C1 <= W].
+    
