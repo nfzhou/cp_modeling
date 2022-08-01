@@ -1,7 +1,7 @@
 import json, sat.
 
 main =>
-    Input = json_read("t.json"),
+    Input = json_read(),
     N = Input.get("n"),
     M = Input.get("m"),
     Univ = to_array(Input.get("univ")),
@@ -9,15 +9,7 @@ main =>
     Comp = Input.get("compatibility"),    
     CompM = {to_array(Row) : Row in Comp},
     maxof(assign(N,M,Univ,Sen,CompM,Sol,Score), Score),
-    O = new_map(),
-    L = [],
-    foreach (S in Sol)
-        Ms = new_map(),
-        Ms.put("set",S),
-        L := [Ms|L]
-    end,
-    O.put("people",L),
-    json_write(O).
+    output(Sol).
 
 assign(N,M,Univ,Sen,CompM,Sol,Score) =>
     Ps = findall(P, perm(N,P)),
@@ -52,7 +44,9 @@ assign(N,M,Univ,Sen,CompM,Sol,Score) =>
         end
     end,
     solve((Sol,Obj)),
-    Score is Obj.
+    Score is Obj,
+    writeln(score = Score),
+    output(Sol).
 
 perm(2,P) => P = [2].
 perm(3,P) => P = [3].
@@ -62,6 +56,16 @@ perm(N,P), N > 3 ?=>
 perm(N,P), N >= 2, even(N) =>
     P = [2 : _ in 1..N div 2].
 
-    
+output(Sol) =>
+    O = new_map(),
+    L = [],
+    foreach (S in Sol)
+        Ms = new_map(),
+        Ms.put("set",S),
+        L := [Ms|L]
+    end,
+    O.put("people",L),
+    json_write(O).
+        
     
     
