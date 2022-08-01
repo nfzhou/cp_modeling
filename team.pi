@@ -1,0 +1,67 @@
+import json, sat.
+
+main =>
+    Input = json_read("t.json"),
+    N = Input.get("n"),
+    M = Input.get("m"),
+    Univ = to_array(Input.get("univ")),
+    Sen = to_array(Input.get("seniority")),
+    Comp = Input.get("compatibility"),    
+    CompM = {to_array(Row) : Row in Comp},
+    maxof(assign(N,M,Univ,Sen,CompM,Sol,Score), Score),
+    O = new_map(),
+    L = [],
+    foreach (S in Sol)
+        Ms = new_map(),
+        Ms.put("set",S),
+        L := [Ms|L]
+    end,
+    O.put("people",L),
+    json_write(O).
+
+assign(N,M,Univ,Sen,CompM,Sol,Score) =>
+    Ps = findall(P, perm(N,P)),
+    member(P,Ps),
+    Sol = [new_list(K) : K in P],
+    Sol :: 1..N,
+    foreach (S in Sol)
+        increasing_strict(S),
+        Len = len(S),
+        Levs = new_list(Len),       % seniority levels of S
+        foreach (I in 1..Len)
+            element(S[I], Sen, Levs[I])
+        end,
+        foreach (Lev in 1..5)
+            sum([Levs[I] #= Lev : I in 1..Len]) #< Len
+        end,
+        Us = new_list(Len),        % universities of S
+        foreach (I in 1..Len)
+            element(S[I], Univ, Us[I])
+        end,
+        foreach (U in 1..M)
+            sum([Us[I] #= U : I in 1..Len]) #< Len
+        end
+    end,
+    all_different(flatten(Sol)),
+    Obj = 0,
+    foreach (S in Sol)
+        Len = len(S),
+        foreach (I in 1..Len-1, J in I+1..Len)
+            matrix_element(CompM,S[I],S[J],Co),
+            Obj := $(Obj+Co)
+        end
+    end,
+    solve((Sol,Obj)),
+    Score is Obj.
+
+perm(2,P) => P = [2].
+perm(3,P) => P = [3].
+perm(N,P), N > 3 ?=>
+    P = [3|P1],
+    perm(N-3, P1).
+perm(N,P), N >= 2, even(N) =>
+    P = [2 : _ in 1..N div 2].
+
+    
+    
+    

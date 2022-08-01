@@ -1,0 +1,41 @@
+import json, sat.
+
+main =>
+    Input = json_read(),
+    H = Input.get("n"),
+    W = Input.get("m"),
+    QA = new_array(H,W),
+    KA = new_array(H,W),
+    QA :: 0..1,
+    KA :: 0..1,
+    foreach (R in 1..H, C in 1..W)
+        cover(H,W,R,C,QA,KA)
+    end,
+    Obj #= 9*sum([QA[R,C] : R in 1..H, C in 1..W]) + 3*sum([KA[R,C] : R in 1..H, C in 1..W]),
+    solve($[min(Obj), report(output(H,W,QA,KA,Obj))],(QA,KA)),
+    output(H,W,QA,KA).
+    
+cover(H,W,R,C,QA,KA) =>
+    QPos = [(R,C1) : C1 in 1..W] ++ [(R1,C) : R1 in 1..H] ++
+           [(R1,C1) : R1 in 1..H, C1 = R+C-R1, C1 >= 1, C1 <= W] ++
+           [(R1,C1) : R1 in 1..H, C1 = R1-R+C, C1 >= 1, C1 <= W],
+    KPos = [(R1,C1) : (Dr,Dc) in [(-1,-2),(-1,2),(1,-2),(1,2),(-2,-1),(-2,1),(2,-1),(2,1)], R1 = R+Dr, C1 = C+Dc, R1 >= 1, R1 <= H, C1 >= 1, C1 <= W],
+    sum([QA[R1,C1] : (R1,C1) in QPos]) #>= 1,
+    sum([KA[R1,C1] : (R1,C1) in KPos]) #>= 1.
+
+output(H,W,QA,KA,Obj) =>
+    Board = new_array(H,W),
+    foreach (R in 1..H, C in 1..W)
+        if QA[R,C] == 1 then
+            Board[R,C] = 2
+        elseif KA[R,C] == 1 then
+            Board[R,C] = 1
+        else
+            Board[R,C] = 0
+        end
+    end,
+    O = new_map(),
+    O.put("board", [[Board[R,C] : C in 1..W] : R in 1..H]),
+    json_write(O),
+    writeln(Obj).
+    

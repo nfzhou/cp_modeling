@@ -1,0 +1,46 @@
+import json, sat.
+
+main =>
+    Input = json_read(),
+    H = Input.get("n"),
+    W = Input.get("m"),
+    Clues = Input.get("clue"),
+    D = {to_array(R) : R in Clues},
+    foreach (Row in D)
+        println(Row)
+    end,
+    A = new_array(H,W),
+    Max = max([max(Row) : Row in D]),
+    between(Max div 3,Max,K),
+    fill(H,W,A,D,K),
+    once solve(A),
+    O = new_map(),
+    O.put("x", [to_list(Row) : Row in A]),
+    json_write(O),
+    fail.
+
+fill(H,W,A,D,K) =>
+    foreach (R in 1..H, C in 1..W)
+        if D[R,C] == -1 || D[R,C] > K then
+            A[R,C] = 0
+        elseif D[R,C] !== 0 then
+            A[R,C] = D[R,C]
+        end
+    end,
+    A :: 0..K,
+    L = [A[R,C] : R in 1..H, C in 1..W, A[R,C] !== 0],
+    element(_,L,1),
+    all_different_except_0(L),
+    foreach (R in 1..H, C in 1..W)
+        neibs(H,W,(R,C),Neibs),
+            if A[R,C] !== 0 then
+            A[R,C] #!= K #/\ A[R,C] #!= 0 #=> sum([A[R1,C1] #= A[R,C]+1 : (R1,C1) in Neibs]) #= 1
+        end
+    end.
+
+neibs(H,W,(R,C),Neibs) =>
+    Neibs = [(R1,C1) : (R1,C1) in [(R-1,C-1), (R-1,C), (R-1,C+1), (R,C+1),
+                                      (R+1,C+1), (R+1,C), (R+1,C-1), (R,C-1)],
+                                       R1 >= 1, R1 =< H,
+                                       C1 >= 1, C1 =< W].
+    
