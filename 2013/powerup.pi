@@ -6,7 +6,7 @@
 %         picat powerup < File
 %
 % or type 'test' to solve the included instance.
-% NOTE: requies Picat version 2.3#7    or up
+% NOTE: requies Picat version 3.2#7 or up
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 import sat.
 
