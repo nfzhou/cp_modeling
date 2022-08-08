@@ -1,0 +1,140 @@
+% powerup.pi (by Neng-Fa Zhou, August 7, 2022)
+% http://www.hakank.org/constraint_programming/cp2013_competition_20130919.pdf
+% 
+% Use the following command to solve an instance File
+%
+%         picat powerup < File
+%
+% or type 'test' to solve the included instance.
+% NOTE: requies Picat version 2.3#7    or up
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+import sat.
+
+test =>
+    H = 4, W = 5,
+    GroundPs = [(3,3),(3,4)],
+    PowerPs = [(2,2),(2,3)],
+    powerup(H,W,GroundPs,PowerPs).
+
+test1 =>
+    H = 8, W = 8,
+    GroundPs = [(3,6),(5,4),(7,3)],
+    PowerPs = [(2,3),(4,5),(6,7)],
+    powerup(H,W,GroundPs,PowerPs).
+
+main =>
+    read_data(H,W,GroundPs,PowerPs),
+    powerup(H,W,GroundPs,PowerPs).
+
+read_data(H,W,GroundPs,PowerPs) =>
+    H = read_int(),
+    W = read_int(),
+    NG = read_int(),
+    GA = new_array(NG),
+    foreach (I in 1..NG)
+        GA[I] = (read_int(),read_int())
+    end,
+    GroundPs = GA.to_list(),
+    NP = read_int(),
+    PA = new_array(NP),
+    foreach (I in 1..NP)
+        PA[I] = (read_int(),read_int())
+    end,
+    PowerPs = PA.to_list().
+
+powerup(H,W,GroundPs,PowerPs) =>
+    GDests = [(1,C) : C in 1..W],
+    PDests = [(H,C) : C in 1..W],
+    make_maps(H,W,GVMap,GEMap),
+    foreach (V in GDests)
+        GVMap.put(V,1)
+    end,
+    make_maps(H,W,PVMap,PEMap),
+    foreach (V in PDests)
+        PVMap.put(V,1)
+    end,
+    foreach (P in GroundPs)
+        make_graph(H,W,Vs,Es),
+        path(Vs,Es,P,GDests),                               % there is a path from P to GDests
+        subgraph(Vs,Es,GVMap,GEMap)
+    end,
+    foreach (P in PowerPs)
+        make_graph(H,W,Vs,Es),
+        path(Vs,Es,P,PDests),                               % there is a path from P to GDests
+        subgraph(Vs,Es,PVMap,PEMap)
+    end,
+    graph_disjoint(GVMap,GEMap,PVMap,PEMap),
+    Links = [B : B in values(GEMap)] ++ [B : B in values(PEMap)],
+    Obj #= sum(Links), 
+    solve($[min(Obj)], Links),
+    print("hor = ["),
+    foreach (R in 1..H, C in 1..W-1)
+        Bg = GEMap.get(((R,C),(R,C+1))),
+        Bp = PEMap.get(((R,C),(R,C+1))),
+        if Bg == 1 || Bp == 1 then
+            write(1)
+        else
+            write(0)
+        end,
+        if not (R == H && C == W-1) then
+            print(',')
+        end
+    end,
+    println("];"),
+    print("ver = ["),
+    foreach (R in 1..H-1, C in 1..W)
+        Bg = GEMap.get(((R,C),(R+1,C))),
+        Bp = PEMap.get(((R,C),(R+1,C))),
+        if Bg == 1 || Bp == 1 then
+            write(1)
+        else
+            write(0)
+        end,
+        if not (R == H-1 && C == W) then
+            print(',')
+        end
+    end,
+    println("];"),
+    printf("obj = %w;\n", Obj div 2).
+
+make_maps(H,W,VMap,EMap) =>
+    VMap = new_map(),
+    foreach (R in 1..H, C in 1..W)
+        VMap.put((R,C),_)
+    end,
+    EMap = new_map(),    
+    foreach (R in 1..H, C in 1..W)
+        neibs(H,W,R,C,Neibs),
+        foreach ((R1,C1) in Neibs)
+            EMap.put(((R,C),(R1,C1)),B),
+            EMap.put(((R1,C1),(R,C)),B)
+        end
+    end.
+
+make_graph(H,W,Vs,Es) =>
+    Vs = [{(R,C),B} : R in 1..H, C in 1..W, B :: 0..1],
+    Es = [{(R,C),(R1,C1),B} : R in 1..H, C in 1..W, neibs(H,W,R,C,Neibs), (R1,C1) in Neibs, (R,C) @< (R1,C1), B :: 0..1].
+    
+neibs(H,W,R,C,Neibs) =>
+    Neibs = [(R1,C1) : (R1,C1) in [(R-1,C), (R+1,C), (R,C-1), (R,C+1)], R1 >= 1, R1 <= H, C1 >= 1, C1 <= W].
+
+subgraph(Vs,Es,VMap,EMap) =>
+    foreach ({V,B} in Vs)
+        B1 = VMap.get(V),
+        B #=> B1
+    end,
+    foreach ({V1,V2,B} in Es)
+        B1 = EMap.get((V1,V2)),
+        B #=> B1
+    end.
+        
+graph_disjoint(GVMap,GEMap,PVMap,PEMap) =>
+    foreach ((V=Bg) in GVMap)
+        Bp = PVMap.get(V),
+        #~Bg #\/ #~Bp
+    end,
+    foreach ((VPair=Bg) in GEMap)
+        Bp = PEMap.get(VPair),
+        #~Bg #\/ #~Bp
+    end.        
+

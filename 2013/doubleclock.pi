@@ -1,0 +1,79 @@
+% doubleclock.pi (by Neng-Fa Zhou, Sep. 25, 2013, tested by Hakan Kjellerstrand)
+% http://www.hakank.org/constraint_programming/cp2013_competition_20130919.pdf
+% 
+% Use the following command to solve an instance File
+%
+%         picat doubleclock < File
+%
+% or type 'test' to solve the included instance.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+import planner,util.
+
+main =>
+    read_data(N,K,Piles),
+    Total is 2*N*K,
+    best_plan([2*N,Total,Piles,N,K],Total,Plan,Cost),
+    printf("p = %w;%n",Plan),
+    printf("obj = %w;%n",Cost),
+    printf("%% method = \"tabling\";%n").
+
+read_data(N,K,Piles) =>
+    N = read_int(),
+    K = read_int(),
+    A = new_array(2*N),
+    foreach (I in 1..2*N)
+        A[I] = read_pile(K).reverse()
+    end,
+    Piles=A.to_list().
+
+%read K integers
+read_pile(K) = [read_int() : _ in 1..K].
+
+final(done) => true.  % all the piles are empty
+
+action([I,1,Piles|_NK],S1,Action,Cost) => % removing the last card
+    Piles[I] = [TopNum],
+    Action = TopNum,
+    Cost=0,
+    S1 = done.
+action([I,T,Piles|NK@[N,_K]],S1,Action,Cost) =>
+    Piles[I] = [TopNum|Pile],
+    CardNo = (TopNum-1) mod N+1,
+    I1 = 2*CardNo-1,
+    I2 = 2*CardNo,
+    Action=TopNum,
+    Piles.replace_at(I,Pile) = NewPiles,
+    (Piles[I1]==[],Piles[I2]==[] ->  % restart
+	Cost=1,
+	find_last_of(NewPiles,[_|_]) = RestartI,
+	S1 = [RestartI,T-1,NewPiles|NK]
+    ;
+        Cost=0,
+        (    list(Piles[I1]),
+             Cost=0,
+	     S1 = [I1,T-1,NewPiles|NK]
+	 ;
+	     list(Piles[I2]),
+	     S1 = [I2,T-1,NewPiles|NK]
+	 )
+     ).
+
+test =>
+    N=4,
+    K=2,
+    Piles=[[5,16],[14,1],[9,10],[8,12],[7,6],[15,11],[4,13],[2,3]],
+    Total is 2*N*K,
+    best_plan([2*N,Total,Piles,N,K],Total,Plan,Cost),
+    printf("p = %w;%n",Plan),
+    printf("obj = %w;%n",Cost),
+    printf("%% method = \"tabling\";%n").
+    
+test1 =>
+    N=13,
+    K=2,
+    Piles=[[14,1],[52,39],[15,2],[51,38],[16,3],[50,37],[17,4],[49,36],[18,5],[48,35],[19,6],[47,34],[20,7],[46,33],[21,8],[45,32],[22,9],[44,31],[23,10],[43,30],[24,11],[42,29],[25,12],[41,28],[26,13],[40,27]],
+    Total is 2*N*K,
+    best_plan([2*N,Total,Piles,N,K],Total,Plan,Cost),
+    printf("p = %w;%n",Plan),
+    printf("obj = %w;%n",Cost),
+    printf("%% method = \"tabling\";%n").

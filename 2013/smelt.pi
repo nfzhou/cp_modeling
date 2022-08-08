@@ -1,0 +1,122 @@
+% smelt.pi (by Neng-Fa Zhou, Sep. 30, 2013)
+% http://www.hakank.org/constraint_programming/cp2013_competition_20130919.pdf
+% 
+% Use the following command to solve an instance File
+%
+%         picat smelt < File
+%
+% or type 'test' to solve the included instance.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+import sat.
+
+main =>
+    NM = read_int(),
+    F = new_array(NM),
+    foreach(I in 1..NM) F[I] = read_int() end,
+    NR = read_int(),
+    C = new_array(NR,NM),
+    foreach (R in 1..NR, M in 1..NM) C[R,M] = read_int() end,
+    NO = read_int(),
+    Orders = new_array(NO),
+    foreach(I in 1..NO)
+        R = read_int(),
+	W = read_int(),
+	H = read_int(),
+	Orders[I] = {R,W*H,_,_,_}
+    end,
+    L = read_int(),
+    NP = read_int(),
+    P = new_array(NP),
+    foreach(I in 1..NP) P[I]={read_int(),read_int(),read_int(),read_int()} end,
+    smelt(NM,F,NR,C,NO,Orders,L,P).
+    
+smelt(NM,F,NR,C,NO,Orders,L,P) =>
+    TotalDu = sum([Du : {_,Du,_,_,_} in Orders]),
+    foreach({_,Du,Start,End,_} in Orders)
+        [Start,End] :: 0..TotalDu,
+	End #= Start+Du,
+	End #<= TotalDu
+    end,
+    % orders of the same recipe are processed one after another
+    foreach(R in 1..NR)
+        RTotalDu = sum([Du : {R1,Du,_,_,_} in Orders,R1==R]),
+	RStarts = [Start : {R1,_,Start,_,_} in Orders,R1==R],	 
+	REnds = [End : {R1,_,_,End,_} in Orders,R1==R],
+	max(REnds)-min(RStarts) #= RTotalDu,
+	RLines = [Line : {R1,_,_,_,Line} in Orders,R1==R],
+	RLines :: 1..L,
+	same_line(RLines)
+    end,
+    % each line processes one order at a time
+    foreach (I in 1..NO-1, J in I+1..NO)
+        Orders[I] = {_,_,S1,E1,L1},
+	Orders[J] = {_,_,S2,E2,L2},
+	(L1 #= L2) #=> (E1#<=S2 #\/ E2#<=S1)
+    end,
+    % resource limits
+    foreach(T in 0..TotalDu-1, K in 1..NM)
+        sum([C[R,K]*B : {R,_,Start,End,_} in Orders, B#<=>(Start #<= T #/\ End #> T)]) #<= F[K]
+    end,
+    %
+    MaxEnd #= max([End : {_,_,_,End,_} in Orders]),
+    Violations = [Violation : Rule in P, violation(Rule,Orders,Violation)],
+    Obj #= sum(Violations)*1000+MaxEnd,
+    %
+    writeln(Orders),
+
+    solve($[min(Obj),min,report(output(Orders,Obj))],Orders).
+
+same_line([L1,L2|Lines]) => L1=L2, same_line([L2|Lines]).
+same_line(_) => true.
+	
+% type 1: all orders for recipe k1 must be finished at least d minutes before
+% any order for recipe k2 starts;
+violation({1,K1,D,K2},Orders,Violation) =>
+    B #<=> max([End : {K1,_,_,End,_} in Orders])+D#<=min([Start : {K2,_,Start,_,_} in Orders]),
+    Violation #^ B.
+
+% type 2: at least one order for recipe k1 cannot finish more than d minutes
+% before some order for recipe k2 starts;
+violation({2,K1,D,K2},Orders,Violation) =>
+    Violation #<=> (max([End : {K1,_,_,End,_} in Orders])+D#<=min([Start : {K2,_,Start,_,_} in Orders])).
+
+% type 3: at least one order for recipe k1 must start no more than d minutes
+% after any order for recipe k2 starts;
+violation({3,K1,D,K2},Orders,Violation) =>
+    Acc = 0,
+    foreach({K1,_,Start1,_,_} in Orders, {K2,_,Start2,_,_} in Orders)
+        Acc := (Acc #\/ Start1 #<= Start2+D)
+    end,
+    Violation #<=> Acc.
+
+% type 4: all orders for recipe k1 must be finished no more than d minutes
+% after some order for recipe k2 finishes.
+violation({4,K1,D,K2},Orders,Violation) =>
+    MaxEnd1 #= max([End : {K1,_,_,End,_} in Orders]),
+    Acc = 0,
+    foreach({K2,_,_,End2,_} in Orders)
+        Acc := (Acc #\/ MaxEnd1 #<= End2+D)
+    end,
+    Violation #<=> Acc.
+
+output(Orders,Obj) =>
+    S = [S : {_,_,S,_,_} in Orders],
+    E = [E : {_,_,_,E,_} in Orders],
+    L = [Line : {_,_,_,_,Line} in Orders],
+    printf("s = %w;%n",S),
+    printf("e = %w;%n",E),
+    printf("l = %w;%n",L),
+    printf("obj = %w;%n",Obj),
+    printf("%% method = \"CP\";%n").
+
+test =>
+    NM=2,
+    F={10,5},
+    NR=3,
+    C={{4,4},{3,1},{6,3}},
+    NO = 4,
+    Orders={{1,6,_,_,_},{2,4,_,_,_},{1,4,_,_,_},{3,1,_,_,_}},
+    L=2,
+    P={{1,1,0,2},{1,2,4,1},{4,3,0,2}},
+    smelt(NM,F,NR,C,NO,Orders,L,P).
+

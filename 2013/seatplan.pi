@@ -1,0 +1,88 @@
+% seatplan.pi (by Neng-Fa Zhou, Sep. 28, 2013)
+% http://www.hakank.org/constraint_programming/cp2013_competition_20130919.pdf
+% This program works only for instances where each table has an even number of 
+% seats and there are an equal number of men and women. It Needs to be
+% extended to deal with general cases.
+%
+% Use the following command to solve an instance File
+%
+%         picat seatplan < File
+%
+% or type 'test' to solve the included instance.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+import sat.
+
+main =>
+    read_data(MMax,FMax,TableMax,TableSize,Partners,Dislikes,SDislikes),
+    seatplan(MMax,FMax,TableMax,TableSize,Partners,Dislikes,SDislikes).
+
+read_data(MMax,FMax,TableMax,TableSize,Partners,Dislikes,SDislikes) =>
+    MMax=read_int(),
+    FMax=read_int(),
+    TableMax=read_int(),    
+    TableSize=read_int(),    
+    NPartners=read_int(),
+    Partners=new_array(NPartners),
+    foreach(I in 1..NPartners)
+	Partners[I] = [read_int(),read_int()]
+    end,
+    NDislikes=read_int(),
+    Dislikes=new_array(NDislikes),
+    foreach(I in 1..NDislikes)
+	Dislikes[I] = [read_int(),read_int()]
+    end,
+    NSDislikes=read_int(),
+    SDislikes=new_array(NSDislikes),
+    foreach(I in 1..NSDislikes)
+	SDislikes[I] = [read_int(),read_int()]
+    end.
+
+seatplan(MMax,FMax,TableMax,TableSize,Partners,Dislikes,SDislikes) =>
+    MVars = new_array(MMax),
+    FVars = new_array(FMax),
+    DSize = TableMax*TableSize,
+    MVars :: 1..2..DSize-1,
+    FVars :: 0..2..DSize-2,
+    FVars[1] #= 0,
+    all_different(MVars),
+    all_different(FVars),
+    List1 = [NotAdj12 : [P1,P2] in Partners,
+                        (get_pos(P1,MVars,FVars,Pos1),get_pos(P2,MVars,FVars,Pos2),not_adjacent(Pos1,Pos2,TableSize,NotAdj12))],
+    List2 = [Adj12 : [P1,P2] in Dislikes,
+                     (get_pos(P1,MVars,FVars,Pos1),get_pos(P2,MVars,FVars,Pos2),adjacent(Pos1,Pos2,TableSize,Adj12))],
+    List3 = [SameT12 : [P1,P2] in SDislikes,
+                       (get_pos(P1,MVars,FVars,Pos1),get_pos(P2,MVars,FVars,Pos2),same_table(Pos1,Pos2,TableSize,SameT12))],
+    Obj #= sum(List1)+sum(List2)+sum(List3),
+    solve($[min(Obj),report(output(Obj,MVars,FVars))],{MVars,FVars,Obj}).
+
+get_pos(P,MVars,FVars,Pos) =>
+    (P>0 -> Pos=FVars[P]; Pos=MVars[-P]).
+
+not_adjacent(Pos1,Pos2,TableSize,NotAdj12) =>
+    NotAdj12 #<=> (Pos1 div TableSize #!= Pos2 div TableSize #\/ abs(Pos1 mod TableSize - Pos2 mod TableSize) #!= 1).
+
+adjacent(Pos1,Pos2,TableSize,Adj12) =>
+    Adj12 #<=> (Pos1 div TableSize #= Pos2 div TableSize #/\ abs(Pos1 mod TableSize - Pos2 mod TableSize) #= 1).
+
+same_table(Pos1,Pos2,TableSize,Same12) =>
+    Same12 #<=> (Pos1 div TableSize #= Pos2 div TableSize).
+
+output(Obj,MVars,FVars) =>
+    MSeats = [MVars[M]+1 : M in MVars.length..-1..1],
+    FSeats = [FVars[F]+1 : F in 1..FVars.length],
+    printf("male = %w;%n",MSeats),
+    printf("female = %w;%n",FSeats),
+    printf("obj = %w;%n",Obj),
+    printf("%% method = \"SAT\";%n").
+
+test =>
+    MMax=12,
+    FMax=11,
+    TableMax=4,
+    TableSize=6,
+    Partners={[-12,1],[-11,2],[-10,3],[-9,4],[-8,5],[-7,6],[-6,-5],[11,10]},
+    Dislikes={[-12,-11],[-12,-8],[-12,-5],[-11,-1],[-11,3],[-10,-6],[-9,7],[-8,10],[-7,5],[-6,4],[-5,3],[-4,-1],[-3,6],[-2,6],[-1,9],[1,-9],[2,-9],[3,-10],[11,-7],[10,-7]},
+    SDislikes={[-12,2],[-9,3],[-8,5],[3,6],[4,-5],[5,10],[6,-10],[8,-9],[10,-4],[11,-4]},
+    seatplan(MMax,FMax,TableMax,TableSize,Partners,Dislikes,SDislikes).
+
+    
